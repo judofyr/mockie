@@ -6,6 +6,10 @@ in static HTML files. This is especially convenient when you're opening
 the files outside of a server (i.e. file://) because of the strict
 cross-site rules which Mockie circumvents.
 
+Just to make it clear: Mockie uses no AJAX, HTML5, Flash, Silverlight,
+ActiveX or any funky stuff. It just creates some iframes and passes
+around data in JSON format. Nothing that wasn't possible ten years ago.
+
 Mockie does not belong in production code, but can rather be used to
 implement partials and layouts which works no matter where the files are
 located.
