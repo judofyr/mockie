@@ -92,3 +92,16 @@ Mockie also let's you define configuration in your files:
 
 This JSON structure is available as `Mockle.config`.
 
+If you need to fetch the configuration from another file, just expose a
+function:
+
+```javascript
+Mockie.expose({
+  fetchConfig: function(done) { done(Mockie.config) }
+});
+
+Mockie.request('file.html', 'fetchConfig', function(cfg) {
+  console.log(cfg);
+});
+```
+
