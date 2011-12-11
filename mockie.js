@@ -10,6 +10,10 @@
 
   var namePrefix = ':mockie:';
 
+  var buildPayload = M.buildPayload = function(obj) {
+    return namePrefix + JSON.stringify(obj);
+  };
+
   var scripts = document.getElementsByTagName('script');
   var me = scripts[scripts.length-1];
   var par = me.parentElement;
@@ -32,7 +36,7 @@
   function buildFrame(file, obj) {
     var i = document.createElement('iframe');
     i.src = file;
-    i.name = namePrefix + JSON.stringify(obj);
+    i.name = buildPayload(obj);
     i.setAttribute('style', 'position:absolute;top:0;left:-100px;width:1px;height:1px');
     return i;
   }
