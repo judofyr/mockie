@@ -54,7 +54,7 @@
 
       // Make sure nothing more in this file gets called
       // by throwing an error and swallowing it immidiatly.
-      ctx.onerror = function(){ return false };
+      ctx.onerror = function(){ return true };
       throw '';
 
     } else if (M.payload.response) {
