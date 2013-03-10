@@ -32,12 +32,22 @@
     M.payload = parseJSON(payload);
   }
 
+  function escapeHTML(str) {
+    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  }
+
   function buildFrame(file, obj) {
-    var i = document.createElement('iframe');
-    i.src = file;
-    i.name = buildPayload(obj);
-    i.setAttribute('style', 'position:absolute;top:0;left:-100px;width:1px;height:1px');
-    return i;
+    var payload = buildPayload(obj);
+
+    // WHY can't I set "name" in IE???
+    var ifr = (/MSIE (6|7|8|9)/).test(navigator.userAgent)
+      ? document.createElement('<iframe name="'+escapeHTML(payload)+'">')
+      : document.createElement('iframe');
+
+    ifr.src = file;
+    ifr.name = payload;
+    ifr.setAttribute('style', 'position:absolute;top:0;left:-100px;width:1px;height:1px');
+    return ifr;
   }
 
   M.expose = function(object) {
@@ -45,7 +55,8 @@
       var req = M.payload.request;
 
       req.args.push(function(res) {
-        par.appendChild(buildFrame(req.caller, {id: M.payload.id, response: res}));
+        var frame = buildFrame(req.caller+'?q=1', {id: M.payload.id, response: res});
+        par.appendChild(frame);
       });
 
       object[req.name].apply(ctx, req.args);
@@ -90,7 +101,6 @@
     function complete(err, res) {
       if (done) return;
       done = true;
-      par.removeChild(ifr);
       delete callbacks[id];
       cb(err, res);
     }
