@@ -44,9 +44,8 @@
     if (M.payload.request) {
       var req = M.payload.request;
 
-      req.args.push(function() {
-        var answer = Array.prototype.slice.call(arguments);
-        par.appendChild(buildFrame(req.caller, {id: M.payload.id, response: answer}));
+      req.args.push(function(res) {
+        par.appendChild(buildFrame(req.caller, {id: M.payload.id, response: res}));
       });
 
       object[req.name].apply(ctx, req.args);
