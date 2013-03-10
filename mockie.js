@@ -15,7 +15,7 @@
   };
 
   var scripts = document.getElementsByTagName('script');
-  var me = scripts[scripts.length-1];
+  var me = M.element = scripts[scripts.length-1];
   var par = me.parentElement;
   par.removeChild(me);
 
