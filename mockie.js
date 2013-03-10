@@ -17,7 +17,6 @@
   var scripts = document.getElementsByTagName('script');
   var me = M.element = scripts[scripts.length-1];
   var par = me.parentElement;
-  par.removeChild(me);
 
   function parseJSON(str) {
     try { return JSON.parse(str) } catch (err) { return {} }
