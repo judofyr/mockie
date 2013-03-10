@@ -47,7 +47,7 @@
 
       req.args.push(function() {
         var answer = Array.prototype.slice.call(arguments);
-        par.appendChild(buildFrame(req.caller, {response: answer}));
+        par.appendChild(buildFrame(req.caller, {id: M.payload.id, response: answer}));
       });
 
       object[req.name].apply(ctx, req.args);
@@ -59,39 +59,49 @@
 
     } else if (M.payload.response) {
       var recv = ctx.parent.parent;
-      recv.MOCKIE_RECEIVE.apply(recv, M.payload.response);
+      recv.MOCKIE_RECEIVE(M.payload.id, M.payload.response);
 
       // Our job is done. Redirect to a blank page.
       ctx.location = 'javascript:""';
     }
   }
 
-  var pending = [];
+  var callbacks = {};
+  var genId = 0;
+
+  ctx.MOCKIE_RECEIVE = function(id, res) {
+    callbacks[id](null, res);
+  };
 
   M.request = function(file, name, args, cb) {
-    if (ctx.MOCKIE_RECEIVE) return pending.push(arguments);
-
     if (!cb) {
       cb = args;
       args = [];
     }
 
+    var id = genId++;
     var obj = {
       caller: ctx.location.toString(),
       name: name,
       args: args
     };
-    var ifr = buildFrame(file, { request: obj });
 
-    ctx.MOCKIE_RECEIVE = function() {
-      delete ctx.MOCKIE_RECEIVE;
-      var nxt = pending.shift();
-      if (nxt) M.request.apply(M, nxt);
+    var done = false;
+    var ifr = buildFrame(file, { id: id, request: obj });
 
-      cb.apply(ctx, arguments);
+    function complete(err, res) {
+      if (done) return;
+      done = true;
       par.removeChild(ifr);
-    };
+      delete callbacks[id];
+      cb(err, res);
+    }
 
+    setTimeout(function() {
+      complete("timeout");
+    }, 3000);
+
+    callbacks[id] = complete;
     par.appendChild(ifr);
   }
 })(this);
