@@ -1,45 +1,56 @@
-(function(ctx) {
-  var prevMockie = ctx.Mockie;
+(function(window) {
+  // Namespacing
+  var prevMockie = window.Mockie;
 
-  var M = ctx.Mockie = {};
+  var M = window.Mockie = {};
 
   M.noConflict = function() {
-    ctx.Mockie = prevMockie;
+    window.Mockie = prevMockie;
     return M;
   };
 
-  var namePrefix = ':mockie:';
-
-  var buildPayload = M.buildPayload = function(obj) {
-    return namePrefix + JSON.stringify(obj);
-  };
-
+  // Finds itself and the parent element.
   var scripts = document.getElementsByTagName('script');
   var me = M.element = scripts[scripts.length-1];
   var par = me.parentElement;
 
+  // Mockie communicates through window.name. We prefix every message
+  // with this prefix to ensure that messages was actually sent from/to
+  // Mockie.
+  var namePrefix = ':mockie:';
+
+  // Builds a payload which can be inserted into name=""
+  function buildPayload(obj) {
+    return namePrefix + JSON.stringify(obj);
+  };
+
+  // Parses JSON safely
   function parseJSON(str) {
     try { return JSON.parse(str) } catch (err) { return {} }
   }
 
-  Mockie.config = parseJSON(me.innerHTML);
-
-  var idx = ctx.name.search(namePrefix);
+  // Searches for the current payload:
+  var idx = window.name.search(namePrefix);
   if (idx == -1) {
     M.payload = {};
   } else {
-    var payload = ctx.name.substring(idx + namePrefix.length);
+    var payload = window.name.substring(idx + namePrefix.length);
     M.payload = parseJSON(payload);
   }
 
+  // Parse innerHTML as JSON
+  M.config = parseJSON(me.innerHTML);
+
+  // Helper for escaping (some) HTML
   function escapeHTML(str) {
     return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   }
 
+  // Builds an iframe with a payload.
   function buildFrame(file, obj) {
     var payload = buildPayload(obj);
 
-    // WHY can't I set "name" in IE???
+    // It's impossible to set .name directly in IE.
     var ifr = (/MSIE (6|7|8|9)/).test(navigator.userAgent)
       ? document.createElement('<iframe name="'+escapeHTML(payload)+'">')
       : document.createElement('iframe');
@@ -50,53 +61,58 @@
     return ifr;
   }
 
+  // This method does all the magic.
   M.expose = function(object) {
     if (M.payload.request) {
       var req = M.payload.request;
 
       req.args.push(function(data) {
         var res = [M.payload.id, data];
-        // Use postMessage if avilable
+        // Use postMessage if avilable.
         if (parent.postMessage) {
           parent.postMessage(res, '*');
         } else {
           // Use `q=1` to avoid restriction of recursive iframes. Assume
           // that browsers that don't support postMessage treats pages
-          // with different query strings as the same origin
-          var frame = buildFrame(req.caller+'?q=1', res);
+          // with different query strings as the same origin.
+          var frame = buildFrame(req.caller+'?q=1', { response: res });
           par.appendChild(frame);
         }
       });
 
-      object[req.name].apply(ctx, req.args);
+      object[req.name].apply(window, req.args);
 
       // Make sure nothing more in this file gets called
       // by throwing an error and swallowing it immidiatly.
-      ctx.onerror = function(){ return true };
+      window.onerror = function(){ return true };
       throw '';
 
     } else if (M.payload.response) {
-      var recv = ctx.parent.parent;
-      recv.MOCKIE_RECEIVE.apply(null, M.response);
+      var recv = window.parent.parent;
+      recv.MOCKIE_RECEIVE.apply(null, M.payload.response);
 
       // Our job is done. Redirect to a blank page.
-      ctx.location = 'javascript:""';
+      window.location = 'javascript:""';
     }
   }
 
   var callbacks = {};
   var genId = 0;
 
-  ctx.MOCKIE_RECEIVE = function(id, res) {
+  window.MOCKIE_RECEIVE = function(id, res) {
     callbacks[id](null, res);
   };
 
-  if (window.addEventListener)
+  // Use postMessage in modern browsers
+  if (window.addEventListener) {
     window.addEventListener('message', function(evt) {
-      ctx.MOCKIE_RECEIVE.apply(null, evt.data);
+      window.MOCKIE_RECEIVE.apply(null, evt.data);
     }, false);
+  }
 
+  // Fires off a request
   M.request = function(file, name, args, cb) {
+    // args is optional
     if (!cb) {
       cb = args;
       args = [];
@@ -104,7 +120,7 @@
 
     var id = genId++;
     var obj = {
-      caller: ctx.location.toString(),
+      caller: window.location.toString(),
       name: name,
       args: args
     };
@@ -117,6 +133,7 @@
       done = true;
       delete callbacks[id];
       cb(err, res);
+      par.removeChild(ifr);
     }
 
     setTimeout(function() {
@@ -126,4 +143,4 @@
     callbacks[id] = complete;
     par.appendChild(ifr);
   }
-})(this);
+})(window);
