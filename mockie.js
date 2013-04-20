@@ -54,9 +54,18 @@
     if (M.payload.request) {
       var req = M.payload.request;
 
-      req.args.push(function(res) {
-        var frame = buildFrame(req.caller+'?q=1', {id: M.payload.id, response: res});
-        par.appendChild(frame);
+      req.args.push(function(data) {
+        var res = [M.payload.id, data];
+        // Use postMessage if avilable
+        if (parent.postMessage) {
+          parent.postMessage(res, '*');
+        } else {
+          // Use `q=1` to avoid restriction of recursive iframes. Assume
+          // that browsers that don't support postMessage treats pages
+          // with different query strings as the same origin
+          var frame = buildFrame(req.caller+'?q=1', res);
+          par.appendChild(frame);
+        }
       });
 
       object[req.name].apply(ctx, req.args);
@@ -68,7 +77,7 @@
 
     } else if (M.payload.response) {
       var recv = ctx.parent.parent;
-      recv.MOCKIE_RECEIVE(M.payload.id, M.payload.response);
+      recv.MOCKIE_RECEIVE.apply(null, M.response);
 
       // Our job is done. Redirect to a blank page.
       ctx.location = 'javascript:""';
@@ -81,6 +90,11 @@
   ctx.MOCKIE_RECEIVE = function(id, res) {
     callbacks[id](null, res);
   };
+
+  if (window.addEventListener)
+    window.addEventListener('message', function(evt) {
+      ctx.MOCKIE_RECEIVE.apply(null, evt.data);
+    }, false);
 
   M.request = function(file, name, args, cb) {
     if (!cb) {
@@ -113,4 +127,3 @@
     par.appendChild(ifr);
   }
 })(this);
-
